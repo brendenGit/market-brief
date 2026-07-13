@@ -2,8 +2,15 @@
 
 import os
 from google import genai
+from google.genai import errors as genai_errors
 
-MODEL_NAME = "gemini-2.5-flash"  # current fast + free-tier model (as of mid-2026)
+# Tried in order — Google renames/retires Gemini model IDs somewhat often,
+# so if the first one 404s, we fall back to the next rather than failing outright.
+MODEL_CANDIDATES = [
+    "gemini-3-flash-preview",
+    "gemini-flash-latest",
+    "gemini-2.5-flash",
+]
 
 
 def _build_prompt(price_data: list[dict], news_data: dict[str, list[dict]]) -> str:
@@ -47,10 +54,25 @@ def summarize(price_data: list[dict], news_data: dict[str, list[dict]]) -> str:
         raise RuntimeError("GEMINI_API_KEY environment variable is not set.")
 
     client = genai.Client(api_key=api_key)
-
     prompt = _build_prompt(price_data, news_data)
-    response = client.models.generate_content(model=MODEL_NAME, contents=prompt)
-    return response.text.strip()
+
+    last_error = None
+    for model_name in MODEL_CANDIDATES:
+        try:
+            response = client.models.generate_content(model=model_name, contents=prompt)
+            return response.text.strip()
+        except genai_errors.ClientError as e:
+            # 404 = model not found/available for this project; try the next candidate.
+            # Any other error (bad key, quota, etc.) should surface immediately.
+            if getattr(e, "code", None) == 404 or "NOT_FOUND" in str(e):
+                last_error = e
+                continue
+            raise
+
+    raise RuntimeError(
+        f"None of the candidate Gemini models worked: {MODEL_CANDIDATES}. "
+        f"Last error: {last_error}"
+    )
 
 
 if __name__ == "__main__":
