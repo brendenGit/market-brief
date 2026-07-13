@@ -1,9 +1,9 @@
 """Turn raw price + news data into a spoken-style daily market brief using Gemini."""
 
 import os
-import google.generativeai as genai
+from google import genai
 
-MODEL_NAME = "gemini-1.5-flash"  # fast + generous free tier
+MODEL_NAME = "gemini-2.5-flash"  # current fast + free-tier model (as of mid-2026)
 
 
 def _build_prompt(price_data: list[dict], news_data: dict[str, list[dict]]) -> str:
@@ -46,11 +46,10 @@ def summarize(price_data: list[dict], news_data: dict[str, list[dict]]) -> str:
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY environment variable is not set.")
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(MODEL_NAME)
+    client = genai.Client(api_key=api_key)
 
     prompt = _build_prompt(price_data, news_data)
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(model=MODEL_NAME, contents=prompt)
     return response.text.strip()
 
 
