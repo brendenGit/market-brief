@@ -1,4 +1,5 @@
 # One ticker per line. Lines starting with # are ignored.
-AAPL
+COST
 MSFT
 NVDA
+CRM
