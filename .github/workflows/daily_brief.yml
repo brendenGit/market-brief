@@ -1,0 +1,32 @@
+name: Daily Market Brief
+
+on:
+  schedule:
+    # Runs 9:00 PM UTC = 1:00 PM PT / 4:00 PM ET (adjust for your timezone)
+    # Cron is in UTC. Change the hour below to shift the send time.
+    - cron: "0 21 * * 1-5"  # weekdays only
+  workflow_dispatch: {}       # lets you manually trigger a run from the Actions tab
+
+jobs:
+  send-brief:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run daily brief
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          TICKERS: ${{ vars.TICKERS }}
+        run: python main.py
